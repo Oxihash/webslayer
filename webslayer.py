@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 
-import argparse
 import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
-import requests
-from zapv2 import ZAPv2
-import nmap
 import subprocess
+import nmap
 import jinja2
 
 class WebSlayer:
     def __init__(self):
         self.target = ""
         self.output_dir = "webslayer_reports"
-        self.zap_api_key = "your_zap_api_key_here"
         self.wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
 
     def display_logo(self):
@@ -39,85 +35,115 @@ class WebSlayer:
 
         print(f"\nInitiating WebSlayer scan on {self.target}\n")
 
-        with tqdm(total=100, desc="Scanning Progress", bar_format="{l_bar}{bar}") as pbar:
-            results = {}
-            scan_functions = [
-                self.run_zap_scan,
-                self.run_dirbuster,
-                self.run_nikto,
-                self.run_nmap_vuln,
-                self.run_waf_scan
-            ]
-            total_scans = len(scan_functions)
-            
-            for scan_func in scan_functions:
+        scan_functions = [
+            self.run_dirbuster,
+            self.run_nikto,
+            self.run_nmap_vuln,
+            self.run_waf_scan
+        ]
+        total_scans = len(scan_functions)
+
+        results = {}
+        with tqdm(total=100, desc="Overall Progress", bar_format="{l_bar}{bar}", position=1) as pbar:
+            for i, scan_func in enumerate(scan_functions, 1):
+                print(f"\nRunning {scan_func.__name__}...")
                 results[scan_func.__name__] = scan_func()
                 pbar.update(100 // total_scans)
+                print(f"{scan_func.__name__} completed.")
 
         print("\nGenerating report...")
         self.generate_report(results)
 
-    def run_zap_scan(self):
-        # Simulating ZAP scan
-        time.sleep(5)
-        return [{"alert": "XSS Vulnerability", "risk": "High", "url": self.target, "description": "Cross-site scripting vulnerability found"}]
-
     def run_dirbuster(self):
-        # Simulating dirbuster scan
-        time.sleep(5)
-        return "Directory /admin found\nDirectory /config found"
+        output_file = "dirbuster_output.txt"
+        cmd = f"gobuster dir -u {self.target} -w {self.wordlist} -o {output_file}"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(output_file, "r") as f:
+            return f.read()
 
     def run_nikto(self):
-        # Simulating nikto scan
-        time.sleep(5)
-        return "Server: Apache/2.4.41\nPHP/7.4.3 detected"
+        output_file = "nikto_output.txt"
+        cmd = f"nikto -h {self.target} -output {output_file}"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(output_file, "r") as f:
+            return f.read()
 
     def run_nmap_vuln(self):
-        # Simulating nmap vulnerability scan
-        time.sleep(5)
-        return "Port 80/tcp open\nPort 443/tcp open\nVulnerability CVE-2021-1234 detected"
+        nm = nmap.PortScanner()
+        nm.scan(self.target, arguments="-sV --script vuln")
+        return nm.csv()
 
     def run_waf_scan(self):
-        # Simulating WAF scan
-        time.sleep(5)
-        return "No WAF detected"
+        output_file = "wafw00f_output.txt"
+        cmd = f"wafw00f {self.target} -o {output_file}"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(output_file, "r") as f:
+            return f.read()
 
     def generate_report(self, results):
         template_str = """
-        # WebSlayer Scan Report
+# WebSlayer Scan Report
 
-        Target: {{ target }}
+## Target: {{ target }}
 
-        ## ZAP Scan Results
-        {% for alert in results['run_zap_scan'] %}
-        - {{ alert.alert }} (Risk: {{ alert.risk }})
-          URL: {{ alert.url }}
-          Description: {{ alert.description }}
-        {% endfor %}
+## Executive Summary
 
-        ## Dirbuster Results
-        ```
-        {{ results['run_dirbuster'] }}
-        ```
+This report presents the findings of a comprehensive security scan conducted on {{ target }}. The scan utilized multiple tools to assess various aspects of the target's security posture, including directory enumeration, web server vulnerabilities, network vulnerabilities, and web application firewall detection.
 
-        ## Nikto Results
-        ```
-        {{ results['run_nikto'] }}
-        ```
+## Scan Results
 
-        ## Nmap Vulnerability Scan Results
-        ```
-        {{ results['run_nmap_vuln'] }}
-        ```
+### Directory Enumeration (Gobuster)
 
-        ## WAF Scan Results
-        ```
-        {{ results['run_waf_scan'] }}
-        ```
+The following directories and files were discovered:
+
+{{ results['run_dirbuster'] }}
+text
+
+### Web Server Vulnerability Scan (Nikto)
+
+Nikto identified the following potential vulnerabilities and information:
+
+{{ results['run_nikto'] }}
+text
+
+### Network Vulnerability Scan (Nmap)
+
+Nmap discovered the following open ports, services, and potential vulnerabilities:
+
+{{ results['run_nmap_vuln'] }}
+text
+
+### Web Application Firewall Detection (Wafw00f)
+
+The WAF detection scan yielded the following results:
+
+{{ results['run_waf_scan'] }}
+text
+
+## Recommendations
+
+Based on the scan results, consider implementing the following recommendations:
+
+1. Review and secure any sensitive directories or files discovered during the directory enumeration.
+2. Address the vulnerabilities identified by Nikto, prioritizing based on severity.
+3. Patch any vulnerable services or systems identified by the Nmap scan.
+4. If a WAF is not detected and the application is public-facing, consider implementing a WAF for additional protection.
+
+## Conclusion
+
+This scan provides an overview of potential security issues present in the target system. It is recommended to conduct regular security assessments and address identified vulnerabilities promptly to maintain a strong security posture.
+
+---
+
+Report generated by WebSlayer on {{ timestamp }}
         """
 
         template = jinja2.Template(template_str)
-        report_content = template.render(target=self.target, results=results)
+        report_content = template.render(
+            target=self.target,
+            results=results,
+            timestamp=time.strftime("%Y-%m-%d %H:%M:%S")
+        )
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
