@@ -47,7 +47,10 @@ class WebSlayer:
         with tqdm(total=100, desc="Overall Progress", bar_format="{l_bar}{bar}", position=1) as pbar:
             for i, scan_func in enumerate(scan_functions, 1):
                 print(f"\nRunning {scan_func.__name__}...")
-                results[scan_func.__name__] = scan_func()
+                try:
+                    results[scan_func.__name__] = scan_func()
+                except Exception as e:
+                    results[scan_func.__name__] = f"Error: {str(e)}"
                 pbar.update(100 // total_scans)
                 print(f"{scan_func.__name__} completed.")
 
@@ -97,28 +100,26 @@ This report presents the findings of a comprehensive security scan conducted on 
 The following directories and files were discovered:
 
 {{ results['run_dirbuster'] }}
-text
+
 
 ### Web Server Vulnerability Scan (Nikto)
 
 Nikto identified the following potential vulnerabilities and information:
 
 {{ results['run_nikto'] }}
-text
+
 
 ### Network Vulnerability Scan (Nmap)
 
 Nmap discovered the following open ports, services, and potential vulnerabilities:
 
 {{ results['run_nmap_vuln'] }}
-text
+
 
 ### Web Application Firewall Detection (Wafw00f)
 
 The WAF detection scan yielded the following results:
 
-{{ results['run_waf_scan'] }}
-text
 
 ## Recommendations
 
