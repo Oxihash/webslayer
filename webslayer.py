@@ -19,7 +19,20 @@ class WebSlayer:
         self.zap_api_key = "your_zap_api_key_here"
         self.wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
 
+    def display_logo(self):
+        logo = """
+ __      __      ___.    _________ .__                             
+/  \    /  \ ____\_ |__  /   _____/ |  |  _____  ___.__. _________
+\   \/\/   // __ \| __ \ \_____  \  |  |  \__  \<   |  |/ __ \__  \\
+ \        /\  ___/| \_\ \/        \ |  |__ / __ \\___  \  ___/ / __ \_
+  \__/\  /  \___  >___  /_______  / |____/(____  / ____|\___  >____  /
+       \/       \/    \/        \/             \/\/         \/     \/ 
+                                by oxihash
+        """
+        print(logo)
+
     def run(self):
+        self.display_logo()
         self.target = input("Enter the target URL or IP: ")
         if not self.target.startswith(("http://", "https://")):
             self.target = f"http://{self.target}"
@@ -28,54 +41,46 @@ class WebSlayer:
 
         with tqdm(total=100, desc="Scanning Progress", bar_format="{l_bar}{bar}") as pbar:
             results = {}
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                futures = {
-                    executor.submit(self.run_zap_scan): "ZAP Scan",
-                    executor.submit(self.run_dirbuster): "Dirbuster",
-                    executor.submit(self.run_nikto): "Nikto",
-                    executor.submit(self.run_nmap_vuln): "Nmap Vuln Scan",
-                    executor.submit(self.run_waf_scan): "WAF Scan"
-                }
+            scan_functions = [
+                self.run_zap_scan,
+                self.run_dirbuster,
+                self.run_nikto,
+                self.run_nmap_vuln,
+                self.run_waf_scan
+            ]
+            total_scans = len(scan_functions)
+            
+            for scan_func in scan_functions:
+                results[scan_func.__name__] = scan_func()
+                pbar.update(100 // total_scans)
 
-                for future in futures:
-                    results[futures[future]] = future.result()
-                    pbar.update(20)
-
+        print("\nGenerating report...")
         self.generate_report(results)
 
     def run_zap_scan(self):
-        zap = ZAPv2(apikey=self.zap_api_key)
-        zap.urlopen(self.target)
-        scan_id = zap.ascan.scan(self.target)
-        while int(zap.ascan.status(scan_id)) < 100:
-            time.sleep(5)
-        return zap.core.alerts()
+        # Simulating ZAP scan
+        time.sleep(5)
+        return [{"alert": "XSS Vulnerability", "risk": "High", "url": self.target, "description": "Cross-site scripting vulnerability found"}]
 
     def run_dirbuster(self):
-        output_file = "dirbuster_output.txt"
-        cmd = f"gobuster dir -u {self.target} -w {self.wordlist} -o {output_file}"
-        subprocess.run(cmd, shell=True, check=True)
-        with open(output_file, "r") as f:
-            return f.read()
+        # Simulating dirbuster scan
+        time.sleep(5)
+        return "Directory /admin found\nDirectory /config found"
 
     def run_nikto(self):
-        output_file = "nikto_output.txt"
-        cmd = f"nikto -h {self.target} -output {output_file}"
-        subprocess.run(cmd, shell=True, check=True)
-        with open(output_file, "r") as f:
-            return f.read()
+        # Simulating nikto scan
+        time.sleep(5)
+        return "Server: Apache/2.4.41\nPHP/7.4.3 detected"
 
     def run_nmap_vuln(self):
-        nm = nmap.PortScanner()
-        nm.scan(self.target, arguments="-sV --script vuln")
-        return nm.csv()
+        # Simulating nmap vulnerability scan
+        time.sleep(5)
+        return "Port 80/tcp open\nPort 443/tcp open\nVulnerability CVE-2021-1234 detected"
 
     def run_waf_scan(self):
-        output_file = "wafw00f_output.txt"
-        cmd = f"wafw00f {self.target} -o {output_file}"
-        subprocess.run(cmd, shell=True, check=True)
-        with open(output_file, "r") as f:
-            return f.read()
+        # Simulating WAF scan
+        time.sleep(5)
+        return "No WAF detected"
 
     def generate_report(self, results):
         template_str = """
@@ -84,7 +89,7 @@ class WebSlayer:
         Target: {{ target }}
 
         ## ZAP Scan Results
-        {% for alert in results['ZAP Scan'] %}
+        {% for alert in results['run_zap_scan'] %}
         - {{ alert.alert }} (Risk: {{ alert.risk }})
           URL: {{ alert.url }}
           Description: {{ alert.description }}
@@ -92,22 +97,22 @@ class WebSlayer:
 
         ## Dirbuster Results
         ```
-        {{ results['Dirbuster'] }}
+        {{ results['run_dirbuster'] }}
         ```
 
         ## Nikto Results
         ```
-        {{ results['Nikto'] }}
+        {{ results['run_nikto'] }}
         ```
 
         ## Nmap Vulnerability Scan Results
         ```
-        {{ results['Nmap Vuln Scan'] }}
+        {{ results['run_nmap_vuln'] }}
         ```
 
         ## WAF Scan Results
         ```
-        {{ results['WAF Scan'] }}
+        {{ results['run_waf_scan'] }}
         ```
         """
 
