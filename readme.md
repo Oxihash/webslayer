@@ -6,7 +6,9 @@ WebSlayer is an automated web application testing and report generating tool.
 
 1. Clone the repository:
 git clone https://github.com/oxihash/webslayer.git
+
 cd webslayer
+
 pip install -r requirements.txt
 
 3. Install system dependencies:
