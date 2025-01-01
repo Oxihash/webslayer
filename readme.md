@@ -7,9 +7,7 @@ WebSlayer is an automated web application testing and report generating tool.
 1. Clone the repository:
 git clone https://github.com/oxihash/webslayer.git
 cd webslayer
-
 pip install -r requirements.txt
-text
 
 3. Install system dependencies:
 - OWASP ZAP
@@ -22,7 +20,6 @@ text
 
 Run the tool:
 python webslayer.py
-text
 
 Follow the prompts to enter the target URL or IP address. The tool will automatically perform the scans and generate a report in the `webslayer_reports` directory.
 
