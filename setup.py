@@ -17,7 +17,7 @@ setup(
         ],
     },
     author="Oxihash",
-    author_email="oxihash@example.com",
+    author_email="oxihash@gmail.com",
     description="An automated web application testing and report generating tool",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
